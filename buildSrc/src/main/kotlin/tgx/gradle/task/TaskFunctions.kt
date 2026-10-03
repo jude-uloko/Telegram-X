@@ -14,9 +14,9 @@
 
 package tgx.gradle.task
 
+import org.gradle.api.logging.Logging
 import tgx.gradle.fatal
 import java.io.File
-import java.io.FileOutputStream
 import java.io.Writer
 import java.nio.file.Files
 import java.util.*
@@ -33,16 +33,17 @@ fun writeTextToFile(file: File, mkdirs: Boolean = true, block: () -> String) {
 
 fun writeToFile(file: File, mkdirs: Boolean = true, block: (Writer) -> Unit) {
   writeToFileImpl(file, mkdirs) { outFile ->
-    FileOutputStream(outFile).use { stream ->
-      stream.bufferedWriter().use {
-        try {
-          block(it)
-        } catch (t: Throwable) {
-          outFile.delete()
-          throw t
+    try {
+      outFile.bufferedWriter().use {
+        block(it)
+      }
+    } catch (t: Throwable) {
+      if (outFile.exists() && !outFile.delete()) {
+        Logging.getLogger("TaskFunctions").apply {
+          error("Unable to delete temp file: ${outFile.absolutePath}")
         }
       }
-      stream.flush()
+      throw t
     }
   }
 }
